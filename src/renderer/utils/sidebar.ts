@@ -49,6 +49,10 @@ function getConversationSearchParamFromUrl(url: string, name: string): string | 
  */
 const SIDEBAR_APP_DEFINITIONS = [
   {
+    id: 'command_center',
+    routePrefix: '/app/command-center'
+  },
+  {
     id: 'agents',
     routePrefix: '/app/agents',
     conversationRoute: {

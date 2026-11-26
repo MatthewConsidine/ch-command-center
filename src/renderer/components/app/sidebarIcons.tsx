@@ -16,6 +16,7 @@ import {
   NotepadText,
   Package,
   Palette,
+  Radar,
   Store
 } from 'lucide-react'
 import type { ReactNode } from 'react'
@@ -33,6 +34,7 @@ const CodeMateIcon: SidebarIconComponent = (props) => <Code {...props} viewBox="
  * components; the navigation data and logic live in `@renderer/utils/sidebar`.
  */
 export const SIDEBAR_ICON_COMPONENTS = {
+  command_center: Radar,
   assistants: MessageSquare,
   agents: MousePointerClick,
   scheduled_tasks: Clock,

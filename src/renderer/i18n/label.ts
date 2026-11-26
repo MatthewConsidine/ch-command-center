@@ -200,6 +200,7 @@ export const getThemeModeLabelKey = (key: string): string => {
 }
 
 const sidebarIconKeyMap = {
+  command_center: 'commandCenter.title',
   scheduled_tasks: 'settings.scheduledTasks.title',
   assistants: 'title.chat',
   agents: 'title.work',
@@ -221,6 +222,7 @@ export const getSidebarIconLabelKey = (key: string): string => {
 // the old one, but main's `components/app/Sidebar` still calls it. Kept until the
 // chat carve brings feat's Sidebar; remove together with that.
 const sidebarFavoriteKeyMap = {
+  command_center: 'commandCenter.title',
   scheduled_tasks: 'settings.scheduledTasks.title',
   assistants: 'assistants.title',
   agents: 'title.work',
