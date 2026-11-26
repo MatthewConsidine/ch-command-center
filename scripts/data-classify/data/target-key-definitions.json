@@ -366,6 +366,11 @@
       "type": "PreferenceTypes.SidebarShortcutItem[]",
       "defaultValue": [
         {
+          "id": "sidebar-shortcut:core.app:command_center",
+          "target": { "kind": "resource", "locator": { "providerId": "core.app", "resourceId": "command_center" } },
+          "type": "shortcut"
+        },
+        {
           "id": "sidebar-shortcut:core.app:agents",
           "target": { "kind": "resource", "locator": { "providerId": "core.app", "resourceId": "agents" } },
           "type": "shortcut"
@@ -1604,6 +1609,20 @@
       },
       "status": "classified",
       "description": "Independent conversation list sorting"
+    },
+    {
+      "targetKey": "feature.command_center.chief_agent_id",
+      "type": "string",
+      "defaultValue": "",
+      "status": "classified",
+      "description": "Command Center: id of the chief orchestrator Agent shown in the center; empty until chosen (fork feature, no v1 source)"
+    },
+    {
+      "targetKey": "feature.command_center.lead_agents",
+      "type": "PreferenceTypes.CommandCenterLeadAgents",
+      "defaultValue": {},
+      "status": "classified",
+      "description": "Command Center: lead Agent id per workspace id, chosen by the user (fork feature, no v1 source)"
     }
   ]
 }

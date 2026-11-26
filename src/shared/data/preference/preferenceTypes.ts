@@ -148,7 +148,11 @@ export type AgentSessionDisplayMode = 'time' | 'agent' | 'workdir'
 
 export type BrowserStartPageMode = 'blank' | 'last' | 'custom'
 
+/** Command Center: workspace id → id of the Agent that leads that project. */
+export type CommandCenterLeadAgents = Record<string, string>
+
 export const SIDEBAR_FAVORITES = [
+  'command_center',
   'assistants',
   'agents',
   'scheduled_tasks',
