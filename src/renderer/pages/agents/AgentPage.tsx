@@ -11,6 +11,7 @@ import type { ResourcePaneConfig, ResourcePaneCountButtonProps } from '@renderer
 import { AgentResourceList } from '@renderer/components/chat/resourceList/AgentResourceList'
 import type { ResourceListRevealRequest } from '@renderer/components/chat/resourceList/base'
 import { ConversationSidebarToggleButton } from '@renderer/components/chat/shell/ConversationSidebarToggleButton'
+import { CommandCenterPane } from '@renderer/components/commandCenter'
 import type { AgentComposerLaunchOptions } from '@renderer/components/composer/variants/AgentComposer'
 import {
   createRecentSessionEntryFromSession,
@@ -81,6 +82,7 @@ import { useAgentConversationBootstrap } from './useAgentConversationBootstrap'
 
 const logger = loggerService.withContext('AgentPage')
 const agentsRouteApi = getRouteApi('/app/agents')
+const commandCenterRouteApi = getRouteApi('/app/command-center')
 type AgentConversationResourceKind = 'agent'
 const AGENT_CONVERSATION_RESOURCE_KINDS = ['agent'] as const satisfies readonly AgentConversationResourceKind[]
 
@@ -106,12 +108,19 @@ function getWorkspaceSourceFromSession(session: AgentSessionEntity): AgentSessio
     : { type: AGENT_WORKSPACE_TYPE.SYSTEM }
 }
 
-const AgentPage = () => {
+interface AgentPageProps {
+  /** `commandCenter` serves this page at `/app/command-center`, with the Command Center pane on the right. */
+  variant?: 'agents' | 'commandCenter'
+}
+
+const AgentPage = ({ variant = 'agents' }: AgentPageProps) => {
+  const isCommandCenter = variant === 'commandCenter'
+  const routeBase = isCommandCenter ? '/app/command-center' : '/app/agents'
   const [showSidebar, setShowSidebar] = usePreference('topic.tab.show')
   const [sessionDisplayMode, setSessionDisplayMode] = usePreference('agent.session.display_mode')
   const [panePosition, setPanePosition] = usePreference('agent.session.position')
   const isClassicSessionLayout = sessionDisplayMode === 'agent'
-  const routeSearch = agentsRouteApi.useSearch<AppRouter>()
+  const routeSearch = (isCommandCenter ? commandCenterRouteApi : agentsRouteApi).useSearch<AppRouter>()
   const navigate = useNavigate()
   const { t } = useTranslation()
   const isFeedbackIntent = routeSearch.intent === 'feedback'
@@ -145,7 +154,7 @@ const AgentPage = () => {
     setPersistedPaneOpen: setShowSidebar
   })
   const sessionListPosition: TopicTabPosition =
-    !isWindowFrame && isClassicSessionLayout && panePosition === 'right' ? 'right' : 'left'
+    !isCommandCenter && !isWindowFrame && isClassicSessionLayout && panePosition === 'right' ? 'right' : 'left'
   const { agents, isLoading: isAgentsLoading } = useAgents()
   const routeAgentExists = !!routeAgentId && agents.some((agent) => agent.id === routeAgentId)
   const [activeSessionId, setActiveSessionIdState] = useState<string | null>(() => routeActiveSessionId)
@@ -163,10 +172,10 @@ const AgentPage = () => {
       ownerFallbackRequestIdRef.current += 1
       setActiveSessionIdState(id)
       if (id) {
-        void navigate({ to: '/app/agents', search: { sessionId: id }, replace: true })
+        void navigate({ to: routeBase, search: { sessionId: id }, replace: true })
       }
     },
-    [navigate]
+    [navigate, routeBase]
   )
   const [sessionPaneOpen, setSessionPaneOpen] = useClassicLayoutRightPaneOpen('agent', {
     enabled: isClassicSessionLayout,
@@ -268,20 +277,20 @@ const AgentPage = () => {
       revalidate: false
     }).then(
       () => {
-        if (!cancelled) void navigate({ to: '/app/agents', search: { sessionId: routeSessionId }, replace: true })
+        if (!cancelled) void navigate({ to: routeBase, search: { sessionId: routeSessionId }, replace: true })
       },
       (error) => {
         if (cancelled) return
         toast.error(
           isDataApiNotFoundError(error) ? t('agent_session_fork.source_not_found') : formatErrorMessage(error)
         )
-        void navigate({ to: '/app/agents', search: { sessionId: forkReturnSessionId }, replace: true })
+        void navigate({ to: routeBase, search: { sessionId: forkReturnSessionId }, replace: true })
       }
     )
     return () => {
       cancelled = true
     }
-  }, [activeSessionId, forkReturnSessionId, navigate, refreshActiveSession, routeSessionId, t])
+  }, [activeSessionId, forkReturnSessionId, navigate, refreshActiveSession, routeBase, routeSessionId, t])
   const reenterAgentRoute = useCallback(() => {
     // The bound session is gone. Drop the remembered id too: `ui.agent.last_used_session_id`
     // is never cleared on delete, so without this the bare re-entry re-reads the stale id in
@@ -289,8 +298,8 @@ const AgentPage = () => {
     // loop React aborts as a maximum-update-depth render error that tears down the window.
     cacheService.setPersist('ui.agent.last_used_session_id', null)
     clearActiveSession()
-    void navigate({ to: '/app/agents', search: {}, replace: true })
-  }, [clearActiveSession, navigate])
+    void navigate({ to: routeBase, search: {}, replace: true })
+  }, [clearActiveSession, navigate, routeBase])
   // Ref is visible to a NOT_FOUND effect that runs before this state commits. State retriggers
   // that effect when the local delete settles, so a last-item route can still recover.
   const pendingLocalPermanentDeleteIdRef = useRef<string | null>(null)
@@ -794,7 +803,7 @@ const AgentPage = () => {
     } finally {
       try {
         await navigate({
-          to: '/app/agents',
+          to: routeBase,
           search: routeSessionId ? { sessionId: routeSessionId } : {},
           replace: true
         })
@@ -841,7 +850,7 @@ const AgentPage = () => {
     } finally {
       try {
         await navigate({
-          to: '/app/agents',
+          to: routeBase,
           search: routeSessionId ? { sessionId: routeSessionId } : {},
           replace: true
         })
@@ -873,7 +882,7 @@ const AgentPage = () => {
       }
       setTaskComposerLaunch(routeTaskComposerLaunch)
       await navigate({
-        to: '/app/agents',
+        to: routeBase,
         search: routeSessionId ? { sessionId: routeSessionId } : {},
         replace: true
       })
@@ -1075,6 +1084,14 @@ const AgentPage = () => {
         setActiveSessionId={setActiveSessionAndClearTransient}
       />
     )
+  const commandCenterPane = isCommandCenter ? (
+    <CommandCenterPane
+      activeSessionId={activeSessionId}
+      sessions={agentSessions}
+      onSelectSession={setActiveSessionAndClearTransient}
+      onStartSession={(agentId, workspaceId) => void createAndActivateEmptySession({ agentId, workspaceId })}
+    />
+  ) : null
   // In classic layout the session list moves into AgentChat's stable right-pane capability catalog.
   // The config stays mounted while AgentChat swaps its conversation and center-surface content.
   const resourcePane: ResourcePaneConfig | null =
@@ -1154,7 +1171,7 @@ const AgentPage = () => {
   return (
     <>
       <AgentTabRuntime
-        title={visibleSession?.name?.trim() || visibleAgent?.name?.trim() || getDefaultRouteTitle('/app/agents')}
+        title={visibleSession?.name?.trim() || visibleAgent?.name?.trim() || getDefaultRouteTitle(routeBase)}
         emoji={agentAvatarIsEmoji ? agentAvatar : undefined}
         icon={agentAvatarIsEmoji ? undefined : agentAvatar}
         preserveVisuals={preserveTabVisuals}
@@ -1167,9 +1184,9 @@ const AgentPage = () => {
           <AgentChat
             centerSurface={centerSurface}
             conversationBootstrap={conversationBootstrap}
-            pane={pane}
+            pane={commandCenterPane ?? pane}
             paneOpen={shellPaneOpen}
-            panePosition="left"
+            panePosition={isCommandCenter ? 'right' : 'left'}
             onPaneCollapse={() => setShellPaneOpenManually(false)}
             onPaneAutoCollapseChange={handlePaneAutoCollapseChange}
             onFileNavigationRequestChange={handleFileNavigationRequestChange}
