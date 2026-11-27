@@ -99,14 +99,14 @@ describe('summarizeProject', () => {
     ({ id, status, workspace: { type: 'user', workspaceId } }) as ScheduledTaskEntity
 
   it('keeps a session awaiting approval on the card however old it is, and counts it', () => {
-    const summary = summarizeProject('ws-a', sessions, new Map([['old-waiting', { status: 'awaiting-approval' }]]), [], 2)
+    const summary = summarizeProject('ws-a', sessions, new Map([['old-waiting', { status: 'awaiting-approval', isAwaitingApproval: true }]]), [], 2)
     expect(summary.sessions.map((entry) => entry.session.id)).toEqual(['old-waiting', 'new-done'])
     expect(summary.waitingCount).toBe(1)
     expect(summary.busy).toBe(true)
   })
 
   it('is idle with nothing running, and ignores other projects and finished streams', () => {
-    const summary = summarizeProject('ws-a', sessions, new Map([['elsewhere', { status: 'streaming' }]]), [])
+    const summary = summarizeProject('ws-a', sessions, new Map([['elsewhere', { status: 'streaming', isAwaitingApproval: false }]]), [])
     expect(summary.busy).toBe(false)
     expect(summary.sessions.map((entry) => entry.session.id)).toEqual(['new-done', 'old-done', 'old-waiting'])
   })
@@ -116,8 +116,15 @@ describe('summarizeProject', () => {
     expect(summarizeProject('ws-a', sessions, new Map(), tasks).tasks.map((entry) => entry.id)).toEqual(['mine'])
   })
 
+  it('shows approval wait for a stream paused mid-turn, which still reports streaming', () => {
+    const paused = new Map([['new-done', { status: 'streaming' as const, isAwaitingApproval: true }]])
+    const summary = summarizeProject('ws-a', sessions, paused, [])
+    expect(summary.sessions[0].state).toBe('waiting')
+    expect(summary.waitingCount).toBe(1)
+  })
+
   it('reports a failed stream as failed rather than done', () => {
-    const summary = summarizeProject('ws-a', sessions, new Map([['new-done', { status: 'error' }]]), [])
+    const summary = summarizeProject('ws-a', sessions, new Map([['new-done', { status: 'error', isAwaitingApproval: false }]]), [])
     expect(summary.sessions[0].state).toBe('failed')
   })
 })

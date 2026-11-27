@@ -462,7 +462,7 @@ vi.mock('@renderer/hooks/agent/useAgentSessionBackgroundTasks', () => ({
 // rule lives, in the projection tests.
 vi.mock('@renderer/hooks/agent/useAgentSessionStreamStatuses', () => ({
   useAgentSessionStreamStatuses: (sessionIds: readonly string[]) =>
-    new Map(sessionIds.map((sessionId) => [sessionId, { isPending: true, status: 'streaming' }]))
+    new Map(sessionIds.map((sessionId) => [sessionId, { isPending: true, isAwaitingApproval: false, status: 'streaming' }]))
 }))
 
 vi.mock('@renderer/hooks/command', () => ({

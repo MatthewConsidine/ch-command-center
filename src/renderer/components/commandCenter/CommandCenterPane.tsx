@@ -65,6 +65,16 @@ export function CommandCenterPane({
     [projects, sessions]
   )
   const streamStatuses = useAgentSessionStreamStatuses(statusSessionIds)
+  const summaries = useMemo(
+    () =>
+      new Map(
+        projects.map(({ workspace }) => [
+          workspace.id,
+          summarizeProject(workspace.id, sessions, streamStatuses, tasks?.items ?? [])
+        ])
+      ),
+    [projects, sessions, streamStatuses, tasks]
+  )
   const activeSession = sessions.find((session) => session.id === activeSessionId)
   const chiefActive = !!chiefAgentId && activeSession?.agentId === chiefAgentId
 
@@ -114,7 +124,7 @@ export function CommandCenterPane({
                 key={workspace.id}
                 name={workspace.name}
                 leadName={(leadAgentId && agentNames.get(leadAgentId)) || t('commandCenter.noLead')}
-                summary={summarizeProject(workspace.id, sessions, streamStatuses, tasks?.items ?? [])}
+                summary={summaries.get(workspace.id)!}
                 active={!chiefActive && activeSession?.workspaceId === workspace.id}
                 activeSessionId={activeSessionId}
                 onOpenProject={() => openAgent(leadAgentId, workspace.id)}

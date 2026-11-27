@@ -7,6 +7,8 @@ import { classifyTurn, type TopicStatusSnapshotEntry } from '@shared/ai/transpor
 
 export type AgentSessionStreamState = {
   isPending: boolean
+  /** Paused for a tool approval: mid-stream anchors, or the terminal `awaiting-approval` status. */
+  isAwaitingApproval: boolean
   status: TopicStatusSnapshotEntry['status']
 }
 
@@ -20,6 +22,8 @@ function toAgentSessionStreamState(
 
   return {
     isPending: classifyTurn(entry.status).isTurnActive,
+    isAwaitingApproval:
+      classifyTurn(entry.status).isAwaitingApproval || (entry.awaitingApprovalAnchors?.length ?? 0) > 0,
     status: entry.status
   }
 }
@@ -37,7 +41,14 @@ function areAgentSessionStreamStatusesEqual(
   if (a.size !== b.size) return false
   for (const [sessionId, state] of a) {
     const other = b.get(sessionId)
-    if (!other || other.status !== state.status || other.isPending !== state.isPending) return false
+    if (
+      !other ||
+      other.status !== state.status ||
+      other.isPending !== state.isPending ||
+      other.isAwaitingApproval !== state.isAwaitingApproval
+    ) {
+      return false
+    }
   }
   return true
 }

@@ -56,7 +56,7 @@ describe('useAgentSessionStreamStatuses', () => {
       cacheService.setShared(KEY, makeEntry('streaming', 1))
     })
 
-    expect(result.current.get(SESSION_ID)).toEqual({ isPending: true, status: 'streaming' })
+    expect(result.current.get(SESSION_ID)).toEqual({ isPending: true, isAwaitingApproval: false, status: 'streaming' })
   })
 
   it('follows a recovered run on its original topic and switches back for the next admission', () => {
@@ -85,6 +85,6 @@ describe('useAgentSessionStreamStatuses', () => {
       cacheService.setShared(KEY, makeEntry('done', 3))
     })
 
-    expect(result.current.get(SESSION_ID)).toEqual({ isPending: false, status: 'done' })
+    expect(result.current.get(SESSION_ID)).toEqual({ isPending: false, isAwaitingApproval: false, status: 'done' })
   })
 })

@@ -84,6 +84,11 @@ export interface ProjectCardSummary {
   tasks: ScheduledTaskEntity[]
 }
 
+interface StreamSnapshot {
+  status: TopicStreamStatus
+  isAwaitingApproval: boolean
+}
+
 const STATE_BY_STREAM_STATUS: Partial<Record<TopicStreamStatus, SessionState>> = {
   pending: 'running',
   streaming: 'running',
@@ -91,22 +96,23 @@ const STATE_BY_STREAM_STATUS: Partial<Record<TopicStreamStatus, SessionState>> =
   error: 'failed'
 }
 
-export function getSessionState(status: TopicStreamStatus | undefined): SessionState {
-  return (status && STATE_BY_STREAM_STATUS[status]) || 'done'
+export function getSessionState(stream: StreamSnapshot | undefined): SessionState {
+  if (stream?.isAwaitingApproval) return 'waiting'
+  return (stream && STATE_BY_STREAM_STATUS[stream.status]) || 'done'
 }
 
 /** One project's live card: its sessions with state, busy flag, approvals waiting and active scheduled tasks. */
 export function summarizeProject(
   workspaceId: string,
   sessions: readonly AgentSessionEntity[],
-  streamStatuses: ReadonlyMap<string, { status: TopicStreamStatus }>,
+  streamStatuses: ReadonlyMap<string, StreamSnapshot>,
   tasks: readonly ScheduledTaskEntity[],
   limit = 4
 ): ProjectCardSummary {
   const all = sessions
     .filter((session) => session.workspaceId === workspaceId)
     .sort(byLatestActivity)
-    .map((session) => ({ session, state: getSessionState(streamStatuses.get(session.id)?.status) }))
+    .map((session) => ({ session, state: getSessionState(streamStatuses.get(session.id)) }))
   const live = all.filter(({ state }) => state === 'running' || state === 'waiting')
   const rest = all.filter(({ state }) => state !== 'running' && state !== 'waiting')
   return {
