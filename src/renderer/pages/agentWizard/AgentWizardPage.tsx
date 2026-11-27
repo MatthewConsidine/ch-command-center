@@ -1,4 +1,4 @@
-import { WandSparkles } from 'lucide-react'
+import { FolderOpen, WandSparkles } from 'lucide-react'
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -235,6 +235,13 @@ function TemplatesFolder({ value, onSave }: { value: string; onSave: (dir: strin
   const { t } = useTranslation()
   const [draft, setDraft] = useState(value)
   useEffect(() => setDraft(value), [value])
+  const browse = async () => {
+    const folder = await window.api.file.selectFolder({
+      title: t('agentWizard.templates.folder'),
+      defaultPath: value || undefined
+    })
+    if (folder) onSave(folder)
+  }
   return (
     <div className="flex flex-col gap-1.5">
       <Label htmlFor="agent-wizard-templates-dir">{t('agentWizard.templates.folder')}</Label>
@@ -243,11 +250,17 @@ function TemplatesFolder({ value, onSave }: { value: string; onSave: (dir: strin
           id="agent-wizard-templates-dir"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          placeholder="C:\\…\\templates"
+          placeholder="C:\…\templates"
         />
-        <Button variant="outline" disabled={draft.trim() === value} onClick={() => onSave(draft.trim())}>
-          {t('common.save')}
+        <Button variant="outline" onClick={() => void browse()}>
+          <FolderOpen />
+          {t('common.browse')}
         </Button>
+        {draft.trim() !== value && (
+          <Button variant="outline" onClick={() => onSave(draft.trim())}>
+            {t('common.save')}
+          </Button>
+        )}
       </div>
       <p className="text-muted-foreground text-xs">{t('agentWizard.templates.hint')}</p>
     </div>
