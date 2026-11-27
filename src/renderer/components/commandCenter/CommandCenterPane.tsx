@@ -7,10 +7,12 @@ import { usePreference } from '@data/hooks/usePreference'
 import { ConversationNavigationPane } from '@renderer/components/chat/shell/ConversationNavigationPane'
 import { useDataChange, useQuery } from '@renderer/data/hooks/useDataApi'
 import { useAgents } from '@renderer/hooks/agent/useAgent'
+import { useAgentSessionStreamStatuses } from '@renderer/hooks/agent/useAgentSessionStreamStatuses'
 import type { AgentSessionEntity } from '@shared/data/api/schemas/agentSessions'
 
-import { findLatestSession, listCommandCenterProjects } from './commandCenterProjects'
+import { findLatestSession, listCommandCenterProjects, summarizeProject } from './commandCenterProjects'
 import { CommandCenterSettings } from './CommandCenterSettings'
+import { ProjectCard } from './ProjectCard'
 
 interface CommandCenterPaneProps {
   activeSessionId: string | null
@@ -22,10 +24,13 @@ interface CommandCenterPaneProps {
   onStartSession: (agentId: string, workspaceId?: string) => void
 }
 
+/** Newest sessions per project that get a live status subscription. */
+const STATUS_SESSIONS_PER_PROJECT = 12
+
 const ROW_CLASS =
   'flex w-full flex-col items-start gap-0.5 rounded-lg px-3 py-2 text-left outline-none hover:bg-accent focus-visible:bg-accent data-[active=true]:bg-accent'
 
-/** Command Center navigation: the chief at the top, then one row per project. */
+/** Command Center navigation: the chief at the top, then one live card per project. */
 export function CommandCenterPane({
   activeSessionId,
   sessions,
@@ -39,6 +44,8 @@ export function CommandCenterPane({
   const [leadAgents] = usePreference('feature.command_center.lead_agents')
   const { data: workspaces, refetch } = useQuery('/agent-workspaces')
   useDataChange('/agent-workspaces', () => void refetch())
+  const { data: tasks, refetch: refetchTasks } = useQuery('/agent-tasks', { query: { limit: 500 } })
+  useDataChange('/agent-tasks', () => void refetchTasks())
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   const agentNames = useMemo(() => new Map(agents.map((agent) => [agent.id, agent.name])), [agents])
@@ -46,6 +53,18 @@ export function CommandCenterPane({
     () => listCommandCenterProjects(workspaces ?? [], sessions, leadAgents, chiefAgentId),
     [chiefAgentId, leadAgents, sessions, workspaces]
   )
+  const statusSessionIds = useMemo(
+    () =>
+      projects.flatMap(({ workspace }) =>
+        sessions
+          .filter((session) => session.workspaceId === workspace.id)
+          .sort((a, b) => Date.parse(b.lastActivityAt) - Date.parse(a.lastActivityAt))
+          .slice(0, STATUS_SESSIONS_PER_PROJECT)
+          .map((session) => session.id)
+      ),
+    [projects, sessions]
+  )
+  const streamStatuses = useAgentSessionStreamStatuses(statusSessionIds)
   const activeSession = sessions.find((session) => session.id === activeSessionId)
   const chiefActive = !!chiefAgentId && activeSession?.agentId === chiefAgentId
 
@@ -91,17 +110,16 @@ export function CommandCenterPane({
             <p className="px-3 text-muted-foreground text-sm">{t('commandCenter.noProjects')}</p>
           ) : (
             projects.map(({ workspace, leadAgentId }) => (
-              <button
+              <ProjectCard
                 key={workspace.id}
-                type="button"
-                className={ROW_CLASS}
-                data-active={!chiefActive && activeSession?.workspaceId === workspace.id}
-                onClick={() => openAgent(leadAgentId, workspace.id)}>
-                <span className="w-full truncate font-medium text-foreground text-sm">{workspace.name}</span>
-                <span className="w-full truncate text-muted-foreground text-xs">
-                  {(leadAgentId && agentNames.get(leadAgentId)) || t('commandCenter.noLead')}
-                </span>
-              </button>
+                name={workspace.name}
+                leadName={(leadAgentId && agentNames.get(leadAgentId)) || t('commandCenter.noLead')}
+                summary={summarizeProject(workspace.id, sessions, streamStatuses, tasks?.items ?? [])}
+                active={!chiefActive && activeSession?.workspaceId === workspace.id}
+                activeSessionId={activeSessionId}
+                onOpenProject={() => openAgent(leadAgentId, workspace.id)}
+                onOpenSession={onSelectSession}
+              />
             ))
           )}
         </div>

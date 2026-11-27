@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest'
 import type { AgentSessionEntity } from '@shared/data/api/schemas/agentSessions'
 import type { AgentWorkspaceEntity } from '@shared/data/api/schemas/agentWorkspaces'
 
-import { findLatestSession, listCommandCenterProjects, listLeadWorkspaces } from '../commandCenterProjects'
+import type { ScheduledTaskEntity } from '@shared/data/types/agent'
+
+import { findLatestSession, listCommandCenterProjects, listLeadWorkspaces, summarizeProject } from '../commandCenterProjects'
 
 function session(id: string, agentId: string, workspaceId: string, lastActivityAt: string): AgentSessionEntity {
   return { id, agentId, workspaceId, lastActivityAt } as AgentSessionEntity
@@ -83,5 +85,39 @@ describe('listLeadWorkspaces', () => {
   it('hides excluded workspaces and system workspaces', () => {
     const system = workspace('sys', 'Sys', 'system')
     expect(listLeadWorkspaces([child, sibling, system], new Set(['child'])).map((w) => w.id)).toEqual(['sibling'])
+  })
+})
+
+describe('summarizeProject', () => {
+  const sessions = [
+    session('old-done', 'lead', 'ws-a', '2026-01-01T00:00:00.000Z'),
+    session('new-done', 'lead', 'ws-a', '2026-03-01T00:00:00.000Z'),
+    session('old-waiting', 'lead', 'ws-a', '2025-12-01T00:00:00.000Z'),
+    session('elsewhere', 'lead', 'ws-b', '2026-04-01T00:00:00.000Z')
+  ]
+  const task = (id: string, workspaceId: string, status: ScheduledTaskEntity['status']) =>
+    ({ id, status, workspace: { type: 'user', workspaceId } }) as ScheduledTaskEntity
+
+  it('keeps a session awaiting approval on the card however old it is, and counts it', () => {
+    const summary = summarizeProject('ws-a', sessions, new Map([['old-waiting', { status: 'awaiting-approval' }]]), [], 2)
+    expect(summary.sessions.map((entry) => entry.session.id)).toEqual(['old-waiting', 'new-done'])
+    expect(summary.waitingCount).toBe(1)
+    expect(summary.busy).toBe(true)
+  })
+
+  it('is idle with nothing running, and ignores other projects and finished streams', () => {
+    const summary = summarizeProject('ws-a', sessions, new Map([['elsewhere', { status: 'streaming' }]]), [])
+    expect(summary.busy).toBe(false)
+    expect(summary.sessions.map((entry) => entry.session.id)).toEqual(['new-done', 'old-done', 'old-waiting'])
+  })
+
+  it('lists only active scheduled tasks of this project', () => {
+    const tasks = [task('mine', 'ws-a', 'active'), task('paused', 'ws-a', 'paused'), task('other', 'ws-b', 'active')]
+    expect(summarizeProject('ws-a', sessions, new Map(), tasks).tasks.map((entry) => entry.id)).toEqual(['mine'])
+  })
+
+  it('reports a failed stream as failed rather than done', () => {
+    const summary = summarizeProject('ws-a', sessions, new Map([['new-done', { status: 'error' }]]), [])
+    expect(summary.sessions[0].state).toBe('failed')
   })
 })
