@@ -617,6 +617,7 @@ export type MainPersistCacheSchema = {
   // Last processed Cherry Cloud notification position per account id; losing one only rebuilds that baseline.
   'cherry_cloud.notification_cursors': Record<string, string>
   'cherryin.models.last_attempt_at': number | null
+  'openrouter.pricing.last_attempt_at': number | null
   // Persist-layer self-test key: exercises the typed persist API and round-trip
   // tests for the generic mechanism, independent of any real consumer.
   'internal.persist_probe': number
@@ -634,6 +635,7 @@ export const DefaultMainPersistCache: MainPersistCacheSchema = {
   'backup.auto_sync.last_attempt_times': { webdav: null, s3: null, local: null, nutstore: null },
   'cherry_cloud.notification_cursors': {},
   'cherryin.models.last_attempt_at': null,
+  'openrouter.pricing.last_attempt_at': null,
   'internal.persist_probe': 0,
   'window.bounds': {}
 }

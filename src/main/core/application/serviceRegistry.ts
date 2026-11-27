@@ -78,6 +78,7 @@ import { NotificationService } from '@main/services/NotificationService'
 import { OAuthRuntimeService } from '@main/services/oauth/runtime/OAuthRuntimeService'
 import { OfficialAnnouncementService } from '@main/services/OfficialAnnouncementService'
 import { OpenClawService } from '@main/services/OpenClawService'
+import { OpenRouterPricingSyncService } from '@main/services/OpenRouterPricingSyncService'
 import { OvmsManager } from '@main/services/OvmsManager'
 import { PdfTranslationService } from '@main/services/PdfTranslationService'
 import { ProtocolService } from '@main/services/protocol/ProtocolService'
@@ -225,6 +226,7 @@ export const services = {
   AutoBackupService,
   ProviderRegistryUpdaterService,
   CherryInModelSyncService,
+  OpenRouterPricingSyncService,
   SchedulerService,
   JobManager,
   TrashService
