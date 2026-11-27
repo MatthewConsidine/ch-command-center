@@ -36,6 +36,8 @@ import type { WindowBoundsState } from '@shared/data/cache/cacheValueTypes'
 
 const logger = loggerService.withContext('WindowManager')
 
+const BOUNDS_SAVE_DEBOUNCE_MS = 500
+
 /** GC tick interval in ms — minute-grained precision is sufficient for decay/inactivity. */
 const WARMUP_GC_INTERVAL = 60_000
 
@@ -1496,6 +1498,16 @@ export class WindowManager extends BaseService {
     // removeAllListeners cleans this listener up.
     if (metadata.lifecycle === 'singleton') {
       window.on('close', () => this.persistBoundsFor(window, type))
+
+      // Also save while the user moves/resizes/maximizes: a killed process (dev
+      // launcher, crash) never fires 'close'.
+      let saveTimer: NodeJS.Timeout | undefined
+      const saveSoon = () => {
+        clearTimeout(saveTimer)
+        saveTimer = setTimeout(() => this.persistBoundsFor(window, type), BOUNDS_SAVE_DEBOUNCE_MS)
+      }
+      for (const event of ['resize', 'move', 'maximize', 'unmaximize'] as const) window.on(event, saveSoon)
+      window.once('closed', () => clearTimeout(saveTimer))
     }
 
     // 5. Store initData synchronously — renderer's cold-start `getInitData`

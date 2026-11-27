@@ -1975,6 +1975,32 @@ describe('WindowManager', () => {
       )
     })
 
+    it('persists bounds shortly after a resize, without waiting for close (killed-process case)', () => {
+      vi.useFakeTimers()
+      try {
+        wm.open('singletonRemember' as never)
+        const win = createdWindows[0]
+        win.getNormalBounds.mockReturnValue({ x: 10, y: 20, width: 1300, height: 850 })
+        vi.mocked(cache().setPersist).mockClear()
+
+        win.emit('resize')
+        win.emit('resize')
+        expect(cache().setPersist).not.toHaveBeenCalled()
+
+        vi.advanceTimersByTime(1000)
+
+        expect(cache().setPersist).toHaveBeenCalledTimes(1)
+        expect(cache().setPersist).toHaveBeenCalledWith(
+          'window.bounds',
+          expect.objectContaining({
+            singletonRemember: expect.objectContaining({ x: 10, y: 20, width: 1300, height: 850 })
+          })
+        )
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
     it('persists bounds on programmatic destroy via wm.close (the close event is skipped)', () => {
       const id = wm.open('singletonRemember' as never)
       const win = createdWindows[0]
