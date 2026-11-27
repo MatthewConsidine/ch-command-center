@@ -128,4 +128,14 @@ describe('cherry-tools ask_model', () => {
     expect(result.isError).toBe(true)
     expect(generateText).not.toHaveBeenCalled()
   })
+
+  it('treats a saved price with no currency as USD', async () => {
+    getByKey.mockReturnValue({
+      isEnabled: true,
+      pricing: { input: { perMillionTokens: 1 }, output: { perMillionTokens: 2 } }
+    })
+    const result = await ask(base)
+    expect(result.isError).toBeUndefined()
+    expect(JSON.parse(text(result)).costUsd).toBeCloseTo((1000 * 1 + 500 * 2) / 1e6)
+  })
 })

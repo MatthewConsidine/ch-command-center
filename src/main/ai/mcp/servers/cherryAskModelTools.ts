@@ -9,7 +9,7 @@ import { modelService } from '@data/services/ModelService'
 import { loggerService } from '@logger'
 import { modelOutputToMcpResult } from '@main/ai/mcp/toolResult'
 import { isSameOrInside, realpath } from '@main/utils/file'
-import { UniqueModelIdSchema } from '@shared/data/types/model'
+import { CURRENCY, type RuntimeModelPricing, UniqueModelIdSchema } from '@shared/data/types/model'
 import { ReasoningEffortOptionSchema } from '@shared/types/aiSdk'
 import { AbsoluteFilePathSchema } from '@shared/types/file'
 import { computeLanguageCost, createAiUsagePricingSnapshot } from '@shared/utils/usagePricing'
@@ -69,6 +69,27 @@ async function readMessagesFile(workspacePath: string, file: string): Promise<Ch
   }
 }
 
+// Saved prices often omit currency; the pricing schema treats that as USD.
+function withDefaultCurrency(pricing: RuntimeModelPricing | undefined): RuntimeModelPricing | undefined {
+  if (!pricing) return undefined
+  const usd = <T extends { currency?: string }>(rate: T | undefined) =>
+    rate && { ...rate, currency: rate.currency ?? CURRENCY.USD }
+  return {
+    ...pricing,
+    input: usd(pricing.input)!,
+    output: usd(pricing.output)!,
+    cacheRead: usd(pricing.cacheRead),
+    cacheWrite: usd(pricing.cacheWrite),
+    inputTokenTiers: pricing.inputTokenTiers?.map((tier) => ({
+      ...tier,
+      input: usd(tier.input)!,
+      output: usd(tier.output)!,
+      cacheRead: usd(tier.cacheRead),
+      cacheWrite: usd(tier.cacheWrite)
+    }))
+  }
+}
+
 const fail = (message: string) => ({ ...modelOutputToMcpResult({ type: 'text', value: message }), isError: true })
 
 /**
@@ -106,7 +127,7 @@ export function registerAskModelTools(server: McpServer, context: { sessionId: s
       try {
         const configured = modelService.getByKey(providerId, modelId)
         if (!configured.isEnabled) return fail(`Model ${id.data} is disabled in Cherry.`)
-        pricing = createAiUsagePricingSnapshot(configured.pricing)
+        pricing = createAiUsagePricingSnapshot(withDefaultCurrency(configured.pricing))
       } catch {
         return fail(`Model ${id.data} is not configured in Cherry.`)
       }
