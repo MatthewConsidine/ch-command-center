@@ -43,3 +43,25 @@ export function listCommandCenterProjects(
     .filter((project) => project.leadAgentId !== chiefAgentId)
     .sort((a, b) => a.workspace.name.localeCompare(b.workspace.name))
 }
+
+function normalizePath(path: string): string {
+  return path.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase()
+}
+
+/**
+ * User workspaces that can have a project lead: not `excludedIds` (the chief's and scheduled
+ * agents' workspaces) and not a folder that contains another workspace.
+ */
+export function listLeadWorkspaces(
+  workspaces: readonly AgentWorkspaceEntity[],
+  excludedIds: ReadonlySet<string>
+): AgentWorkspaceEntity[] {
+  const users = workspaces.filter((workspace) => workspace.type === AGENT_WORKSPACE_TYPE.USER)
+  const paths = users.map((workspace) => normalizePath(workspace.path))
+  return users
+    .filter((workspace, index) => {
+      const prefix = paths[index] + '/'
+      return !excludedIds.has(workspace.id) && !paths.some((other) => other.startsWith(prefix))
+    })
+    .sort((a, b) => a.name.localeCompare(b.name))
+}

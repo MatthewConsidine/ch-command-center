@@ -5,7 +5,8 @@ import { Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } 
 import { usePreference } from '@data/hooks/usePreference'
 import { useDataChange, useQuery } from '@renderer/data/hooks/useDataApi'
 import { useAgents } from '@renderer/hooks/agent/useAgent'
-import { AGENT_WORKSPACE_TYPE } from '@shared/data/api/schemas/agentWorkspaces'
+
+import { listLeadWorkspaces } from './commandCenterProjects'
 
 const AUTO_LEAD = '__auto__'
 
@@ -21,13 +22,18 @@ export function CommandCenterSettings({ onChiefChange }: CommandCenterSettingsPr
   const [leadAgents, setLeadAgents] = usePreference('feature.command_center.lead_agents')
   const { data: workspaces, refetch } = useQuery('/agent-workspaces')
   useDataChange('/agent-workspaces', () => void refetch())
-  const userWorkspaces = useMemo(
-    () =>
-      (workspaces ?? [])
-        .filter((workspace) => workspace.type === AGENT_WORKSPACE_TYPE.USER)
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    [workspaces]
-  )
+  const { data: chiefLatest } = useQuery('/agent-sessions/latest', {
+    query: { agentId: chiefAgentId || 'unlinked' }
+  })
+  const { data: tasks } = useQuery('/agent-tasks', { query: { limit: 500 } })
+  const userWorkspaces = useMemo(() => {
+    const excluded = new Set<string>()
+    if (chiefAgentId && chiefLatest?.session?.workspaceId) excluded.add(chiefLatest.session.workspaceId)
+    for (const task of tasks?.items ?? []) {
+      if (task.workspace.type === 'user') excluded.add(task.workspace.workspaceId)
+    }
+    return listLeadWorkspaces(workspaces ?? [], excluded)
+  }, [chiefAgentId, chiefLatest, tasks, workspaces])
 
   const handleChiefChange = async (agentId: string) => {
     await setChiefAgentId(agentId)

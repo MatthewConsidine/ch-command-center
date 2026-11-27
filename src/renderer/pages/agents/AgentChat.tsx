@@ -145,7 +145,7 @@ interface AgentChatProps {
   onMissingAgentSelectionAgentChange?: (agentId: string | null) => void | Promise<void>
   onSessionWorkspaceChange?: (workspaceId: string | null) => void | Promise<void>
   onVisibleAgentChange?: (agentId: string) => void
-  onVisibleWorkspaceChange?: (workspaceId: string) => void
+  onVisibleWorkspaceChange?: (workspaceId: string, agentId?: string | null) => void
   selectingMissingAgent?: boolean
   replacingSessionWorkspace?: boolean
   resourcePane?: ResourcePaneConfig | null
@@ -261,8 +261,10 @@ const AgentChat = ({
     if (visibleAgentId) onVisibleAgentChange?.(visibleAgentId)
   }, [onVisibleAgentChange, visibleAgentId])
   useEffect(() => {
-    if (visibleWorkspaceId && visibleWorkspace?.type !== 'system') onVisibleWorkspaceChange?.(visibleWorkspaceId)
-  }, [onVisibleWorkspaceChange, visibleWorkspace, visibleWorkspaceId])
+    if (visibleWorkspaceId && visibleWorkspace?.type !== 'system') {
+      onVisibleWorkspaceChange?.(visibleWorkspaceId, visibleAgentId)
+    }
+  }, [onVisibleWorkspaceChange, visibleAgentId, visibleWorkspace, visibleWorkspaceId])
   useEffect(() => {
     setCitationPanelState(null)
   }, [currentSessionId])

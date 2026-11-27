@@ -214,6 +214,16 @@ const AgentPage = ({ variant = 'agents' }: AgentPageProps) => {
     cacheService.setPersist('ui.agent.last_used_agent_id', agentId)
   }, [])
   const [lastUsedWorkspaceId, setLastUsedWorkspaceId] = usePersistCache('ui.agent.last_used_workspace_id')
+  const [chiefAgentId] = usePreference('feature.command_center.chief_agent_id')
+  const [chiefWorkspaceId, setChiefWorkspaceId] = usePersistCache('ui.command_center.chief_workspace_id')
+  // In Command Center the chief keeps its own workspace; it must not feed the shared last-used one.
+  const rememberWorkspace = useCallback(
+    (workspaceId: string, agentId?: string | null) => {
+      if (isCommandCenter && !!chiefAgentId && agentId === chiefAgentId) setChiefWorkspaceId(workspaceId)
+      else setLastUsedWorkspaceId(workspaceId)
+    },
+    [chiefAgentId, isCommandCenter, setChiefWorkspaceId, setLastUsedWorkspaceId]
+  )
   const lastRecordedRecentSessionRef = useRef<string | undefined>(undefined)
   const [sessionRevealRequest, setSessionRevealRequest] = useState<ResourceListRevealRequest>()
   const sessionRevealRequestIdRef = useRef(0)
@@ -445,9 +455,9 @@ const AgentPage = ({ variant = 'agents' }: AgentPageProps) => {
   const rememberLastUsedSession = useCallback(
     (agentId: string, userWorkspaceId?: string) => {
       setLastUsedAgentId(agentId)
-      if (userWorkspaceId) setLastUsedWorkspaceId(userWorkspaceId)
+      if (userWorkspaceId) rememberWorkspace(userWorkspaceId, agentId)
     },
-    [setLastUsedAgentId, setLastUsedWorkspaceId]
+    [rememberWorkspace, setLastUsedAgentId]
   )
 
   const resolveCreateWorkspaceSource = useCallback(
@@ -456,8 +466,17 @@ const AgentPage = ({ variant = 'agents' }: AgentPageProps) => {
       fallbackSession?: AgentSessionEntity | null
     ): Promise<AgentSessionWorkspaceSource> => {
       if (defaults.workspace) return defaults.workspace
-      if (defaults.workspaceMode === 'system') return { type: AGENT_WORKSPACE_TYPE.SYSTEM }
       if (defaults.workspaceId) return { type: AGENT_WORKSPACE_TYPE.USER, workspaceId: defaults.workspaceId }
+      if (isCommandCenter && chiefAgentId && defaults.agentId === chiefAgentId && chiefWorkspaceId) {
+        try {
+          await dataApiService.get(`/agent-workspaces/${chiefWorkspaceId}`)
+          return { type: AGENT_WORKSPACE_TYPE.USER, workspaceId: chiefWorkspaceId }
+        } catch (err) {
+          logger.warn('Failed to reuse remembered chief workspace', err as Error, { workspaceId: chiefWorkspaceId })
+          setChiefWorkspaceId(null)
+        }
+      }
+      if (defaults.workspaceMode === 'system') return { type: AGENT_WORKSPACE_TYPE.SYSTEM }
       if (fallbackSession && (!defaults.agentId || defaults.agentId === fallbackSession.agentId)) {
         return getWorkspaceSourceFromSession(fallbackSession)
       }
@@ -475,7 +494,14 @@ const AgentPage = ({ variant = 'agents' }: AgentPageProps) => {
         return { type: AGENT_WORKSPACE_TYPE.SYSTEM }
       }
     },
-    [lastUsedWorkspaceId, setLastUsedWorkspaceId]
+    [
+      chiefAgentId,
+      chiefWorkspaceId,
+      isCommandCenter,
+      lastUsedWorkspaceId,
+      setChiefWorkspaceId,
+      setLastUsedWorkspaceId
+    ]
   )
 
   const activateSession = useCallback(
@@ -971,7 +997,7 @@ const AgentPage = ({ variant = 'agents' }: AgentPageProps) => {
 
       if (workspaceId === null && isSystemWorkspaceSession(current)) return
       if (workspaceId && isUserWorkspaceSession(current) && workspaceId === current.workspaceId) {
-        setLastUsedWorkspaceId(workspaceId)
+        rememberWorkspace(workspaceId, current.agentId)
         return
       }
       if (replacingSessionWorkspace) return
@@ -985,14 +1011,14 @@ const AgentPage = ({ variant = 'agents' }: AgentPageProps) => {
         if (!updated) return
 
         if (workspaceId) {
-          setLastUsedWorkspaceId(workspaceId)
+          rememberWorkspace(workspaceId, current.agentId)
         }
         setActiveSession(updated)
       } finally {
         setReplacingSessionWorkspace(false)
       }
     },
-    [replacingSessionWorkspace, setActiveSession, setLastUsedWorkspaceId, setSessionWorkspace, visibleSession]
+    [rememberWorkspace, replacingSessionWorkspace, setActiveSession, setSessionWorkspace, visibleSession]
   )
   const handleLocateMessageHandled = clearLocate
 
@@ -1088,6 +1114,7 @@ const AgentPage = ({ variant = 'agents' }: AgentPageProps) => {
     <CommandCenterPane
       activeSessionId={activeSessionId}
       sessions={agentSessions}
+      chiefWorkspaceId={chiefWorkspaceId}
       onSelectSession={setActiveSessionAndClearTransient}
       onStartSession={(agentId, workspaceId) => void createAndActivateEmptySession({ agentId, workspaceId })}
     />
@@ -1200,7 +1227,7 @@ const AgentPage = ({ variant = 'agents' }: AgentPageProps) => {
             onMissingAgentSelectionAgentChange={handleMissingAgentSelectionAgentChange}
             onSessionWorkspaceChange={replaceSessionWorkspace}
             onVisibleAgentChange={setLastUsedAgentId}
-            onVisibleWorkspaceChange={setLastUsedWorkspaceId}
+            onVisibleWorkspaceChange={rememberWorkspace}
             locateMessageId={locateMessageId}
             locateToEnd={locateToEnd}
             onLocateMessageHandled={handleLocateMessageHandled}

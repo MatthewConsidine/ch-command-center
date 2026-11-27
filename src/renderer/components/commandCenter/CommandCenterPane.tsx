@@ -15,6 +15,8 @@ import { CommandCenterSettings } from './CommandCenterSettings'
 interface CommandCenterPaneProps {
   activeSessionId: string | null
   sessions: readonly AgentSessionEntity[]
+  /** Workspace the chief chats in; the chief's sessions elsewhere are skipped. */
+  chiefWorkspaceId?: string | null
   onSelectSession: (sessionId: string) => void
   /** Start a session for `agentId`, in `workspaceId` when given. */
   onStartSession: (agentId: string, workspaceId?: string) => void
@@ -27,6 +29,7 @@ const ROW_CLASS =
 export function CommandCenterPane({
   activeSessionId,
   sessions,
+  chiefWorkspaceId,
   onSelectSession,
   onStartSession
 }: CommandCenterPaneProps) {
@@ -76,7 +79,7 @@ export function CommandCenterPane({
             type="button"
             className={ROW_CLASS}
             data-active={chiefActive}
-            onClick={() => openAgent(chiefAgentId || undefined)}>
+            onClick={() => openAgent(chiefAgentId || undefined, chiefWorkspaceId || undefined)}>
             <span className="font-medium text-foreground text-sm">
               {agentNames.get(chiefAgentId) ?? t('commandCenter.chief')}
             </span>

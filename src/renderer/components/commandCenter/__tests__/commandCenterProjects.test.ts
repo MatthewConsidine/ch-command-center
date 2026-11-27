@@ -3,14 +3,19 @@ import { describe, expect, it } from 'vitest'
 import type { AgentSessionEntity } from '@shared/data/api/schemas/agentSessions'
 import type { AgentWorkspaceEntity } from '@shared/data/api/schemas/agentWorkspaces'
 
-import { findLatestSession, listCommandCenterProjects } from '../commandCenterProjects'
+import { findLatestSession, listCommandCenterProjects, listLeadWorkspaces } from '../commandCenterProjects'
 
 function session(id: string, agentId: string, workspaceId: string, lastActivityAt: string): AgentSessionEntity {
   return { id, agentId, workspaceId, lastActivityAt } as AgentSessionEntity
 }
 
-function workspace(id: string, name: string, type: 'user' | 'system' = 'user'): AgentWorkspaceEntity {
-  return { id, name, type } as AgentWorkspaceEntity
+function workspace(
+  id: string,
+  name: string,
+  type: 'user' | 'system' = 'user',
+  path = `/work/${id}`
+): AgentWorkspaceEntity {
+  return { id, name, type, path } as AgentWorkspaceEntity
 }
 
 describe('findLatestSession', () => {
@@ -63,5 +68,20 @@ describe('listCommandCenterProjects', () => {
   it('keeps a project with no lead yet so one can be chosen', () => {
     const projects = listCommandCenterProjects([workspace('ws-new', 'New')], sessions, {}, 'chief')
     expect(projects).toEqual([{ workspace: workspace('ws-new', 'New'), leadAgentId: undefined }])
+  })
+})
+
+describe('listLeadWorkspaces', () => {
+  const root = workspace('root', 'Root', 'user', 'C:\\Work\\')
+  const child = workspace('child', 'Child', 'user', 'c:/work/child')
+  const sibling = workspace('sibling', 'Sibling', 'user', 'C:\\Workshop')
+
+  it('hides a workspace that is the parent folder of another, whatever the path style', () => {
+    expect(listLeadWorkspaces([root, child, sibling], new Set()).map((w) => w.id)).toEqual(['child', 'sibling'])
+  })
+
+  it('hides excluded workspaces and system workspaces', () => {
+    const system = workspace('sys', 'Sys', 'system')
+    expect(listLeadWorkspaces([child, sibling, system], new Set(['child'])).map((w) => w.id)).toEqual(['sibling'])
   })
 })

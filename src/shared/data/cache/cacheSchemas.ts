@@ -488,6 +488,7 @@ export type RendererPersistCacheSchema = {
   'ui.agent.last_used_session_id': string | null
   'ui.agent.last_used_agent_id': string | null
   'ui.agent.last_used_workspace_id': string | null
+  'ui.command_center.chief_workspace_id': string | null
   // Kept separate so the assistant and agent surfaces don't bleed into each other.
   'ui.agent.right_pane_open_override': boolean | null
   'ui.agent.details.open': boolean
@@ -564,6 +565,7 @@ export const DefaultRendererPersistCache: RendererPersistCacheSchema = {
   'ui.agent.last_used_session_id': null,
   'ui.agent.last_used_agent_id': null,
   'ui.agent.last_used_workspace_id': null,
+  'ui.command_center.chief_workspace_id': null,
   'ui.agent.right_pane_open_override': null,
   'ui.agent.details.open': true,
   'ui.agent.session.expansion.time': [],
