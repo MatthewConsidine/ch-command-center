@@ -79,6 +79,35 @@ describe('fetchResolvedProviderModels', () => {
     })
   })
 
+  it('keeps the live price a provider returns over the bundled registry price', async () => {
+    const live = { input: { perMillionTokens: 2 }, output: { perMillionTokens: 10 } }
+    listModelsMock.mockResolvedValueOnce({
+      models: [
+        {
+          id: 'openrouter::anthropic/claude-sonnet-5.5',
+          providerId: 'openrouter',
+          apiModelId: 'anthropic/claude-sonnet-5.5',
+          name: 'Anthropic: Claude Sonnet 5.5',
+          pricing: live
+        }
+      ]
+    })
+    dataApiGetMock.mockResolvedValueOnce([
+      {
+        id: 'openrouter::anthropic/claude-sonnet-5.5',
+        providerId: 'openrouter',
+        apiModelId: 'anthropic/claude-sonnet-5.5',
+        name: 'Claude Sonnet 5.5',
+        pricing: { input: { perMillionTokens: 3 }, output: { perMillionTokens: 15 } }
+      }
+    ])
+
+    const { models } = await fetchResolvedProviderModels('openrouter')
+
+    expect(models[0].pricing).toEqual(live)
+    expect(toCreateModelDto('openrouter', models[0]).pricing).toEqual(live)
+  })
+
   it('uses registry reasoning controls while preserving discovered thinking support', async () => {
     listModelsMock.mockResolvedValueOnce({
       models: [

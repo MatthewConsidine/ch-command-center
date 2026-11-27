@@ -1048,6 +1048,31 @@ describe('listModels — openRouterFetcher image models', () => {
     })
   })
 
+  it('carries the live OpenRouter price on each model, leaving variable-price routers unpriced', async () => {
+    const provider = makeOpenRouterProvider()
+    aiSdkGetFromApiMock.mockImplementation(({ url }: { url: string }) => {
+      if (url === 'https://openrouter.example/models') {
+        return Promise.resolve({
+          value: {
+            data: [
+              { id: 'anthropic/claude-sonnet-4', pricing: { prompt: '0.000003', completion: '0.000015' } },
+              { id: 'openrouter/auto', pricing: { prompt: '-1', completion: '-1' } }
+            ]
+          }
+        })
+      }
+      return Promise.resolve({ value: { data: [] } })
+    })
+
+    const { models } = await listModels(provider)
+
+    expect(models.find((model) => model.apiModelId === 'anthropic/claude-sonnet-4')?.pricing).toEqual({
+      input: { perMillionTokens: 3 },
+      output: { perMillionTokens: 15 }
+    })
+    expect(models.find((model) => model.apiModelId === 'openrouter/auto')?.pricing).toBeUndefined()
+  })
+
   it('keeps the primary and embedding catalogs when the image catalog fails in strict sync mode', async () => {
     const apiKey = 'sk-should-not-reach-logs'
     const provider = makeOpenRouterProvider()

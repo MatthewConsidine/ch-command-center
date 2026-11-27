@@ -69,7 +69,9 @@ export function toCreateModelDto(
     ...(resolvedEndpointTypes?.length ? { endpointTypes: [...resolvedEndpointTypes] } : {}),
     // Discovered rather than registry-supplied for local providers — Ollama's window comes from
     // `/api/show`, and dropping it here leaves the row without one, so no `num_ctx` is ever sent.
-    ...(model.contextWindow ? { contextWindow: model.contextWindow } : {})
+    ...(model.contextWindow ? { contextWindow: model.contextWindow } : {}),
+    // Live prices some providers return with their model list (e.g. OpenRouter); stored only where they differ.
+    ...(model.pricing ? { pricing: model.pricing } : {})
   }
 }
 
@@ -140,6 +142,9 @@ async function enrichFetchedModels(providerId: string, fetchedModels: Partial<Mo
         continue
       }
       if (field === 'name' && keepFetchedName) {
+        continue
+      }
+      if (field === 'pricing' && base.pricing) {
         continue
       }
       const value = registry[field]
