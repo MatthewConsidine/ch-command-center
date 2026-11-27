@@ -38,11 +38,11 @@ export function ProjectCard({
 
   return (
     <div
-      className="flex flex-col rounded-lg border border-border/60 data-[active=true]:border-border data-[active=true]:bg-accent/40"
+      className="flex flex-col rounded-lg border border-border/60 hover:bg-accent/40 data-[active=true]:border-border data-[active=true]:bg-accent/40"
       data-active={active}>
       <button
         type="button"
-        className="flex w-full flex-col gap-0.5 rounded-lg px-3 py-2 text-left outline-none hover:bg-accent focus-visible:bg-accent"
+        className="flex w-full flex-col gap-0.5 rounded-lg px-3 py-2 text-left outline-none focus-visible:bg-accent"
         onClick={onOpenProject}>
         <span className="flex w-full items-center gap-2">
           <span className="min-w-0 flex-1 truncate font-medium text-foreground text-sm">{name}</span>
@@ -73,7 +73,7 @@ export function ProjectCard({
               onClick={() => onOpenSession(session.id)}>
               <span className={cn('size-1.5 shrink-0 rounded-full', STATE_DOT[state])} />
               <span className="min-w-0 flex-1 truncate text-foreground text-xs">
-                {session.name || t('commandCenter.untitledSession')}
+                {session.name || session.description || t('commandCenter.untitledSession')}
               </span>
               <span className="shrink-0 text-muted-foreground text-xs">
                 {state === 'done' || state === 'failed'
