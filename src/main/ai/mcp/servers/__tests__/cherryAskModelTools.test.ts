@@ -5,6 +5,7 @@ import path from 'node:path'
 import type { Client } from '@modelcontextprotocol/client'
 import { McpServer } from '@modelcontextprotocol/server'
 import { connectMcpTestClient } from '@test-helpers/mcp/client'
+import sharp from 'sharp'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const generateText = vi.fn()
@@ -137,5 +138,82 @@ describe('cherry-tools ask_model', () => {
     const result = await ask(base)
     expect(result.isError).toBeUndefined()
     expect(JSON.parse(text(result)).costUsd).toBeCloseTo((1000 * 1 + 500 * 2) / 1e6)
+  })
+
+  describe('image input', () => {
+    const vision = (input = 1, output = 2) => ({ ...priced(input, output), capabilities: ['image-recognition'] })
+    const png = (width: number, height: number) =>
+      sharp({ create: { width, height, channels: 3, background: '#808080' } })
+        .png()
+        .toBuffer()
+    const askWithImage = (image: string) =>
+      ask({ model: base.model, messages: [{ role: 'user', content: [{ type: 'image', image }] }] })
+    const sentContent = () => generateText.mock.calls[0][0].messages[0].content
+
+    beforeEach(() => {
+      getByKey.mockReturnValue(vision())
+    })
+
+    it('sends a workspace image named in messagesFile as an image part', async () => {
+      writeFileSync(path.join(workspace, 'shot.png'), await png(64, 64))
+      writeFileSync(
+        path.join(workspace, 'vision.json'),
+        JSON.stringify([
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: 'describe' },
+              { type: 'image', image: 'shot.png' }
+            ]
+          }
+        ])
+      )
+      const result = await ask({ model: base.model, messagesFile: 'vision.json' })
+      expect(result.isError).toBeUndefined()
+      expect(sentContent()).toEqual([
+        { type: 'text', text: 'describe' },
+        { type: 'image', image: expect.any(Uint8Array), mediaType: 'image/png' }
+      ])
+    })
+
+    it('accepts a base64 data URL', async () => {
+      const result = await askWithImage(`data:image/png;base64,${(await png(8, 8)).toString('base64')}`)
+      expect(result.isError).toBeUndefined()
+      expect(sentContent()[0]).toMatchObject({ type: 'image', mediaType: 'image/png' })
+    })
+
+    it('refuses images for a model without image input', async () => {
+      getByKey.mockReturnValue({ ...priced(1, 2), capabilities: [] })
+      writeFileSync(path.join(workspace, 'a.png'), await png(8, 8))
+      const result = await askWithImage('a.png')
+      expect(result.isError).toBe(true)
+      expect(text(result)).toContain('does not accept image input')
+      expect(generateText).not.toHaveBeenCalled()
+    })
+
+    it('refuses an image path outside the workspace', async () => {
+      const outside = path.join(mkdtempSync(path.join(tmpdir(), 'outside-')), 'a.png')
+      writeFileSync(outside, await png(8, 8))
+      const result = await askWithImage(outside)
+      expect(result.isError).toBe(true)
+      expect(text(result)).toContain('inside your workspace')
+      expect(generateText).not.toHaveBeenCalled()
+    })
+
+    it('refuses a file that is not an image', async () => {
+      writeFileSync(path.join(workspace, 'fake.png'), 'not an image')
+      const result = await askWithImage('fake.png')
+      expect(result.isError).toBe(true)
+      expect(generateText).not.toHaveBeenCalled()
+    })
+
+    it('counts image tokens toward the per-call cap', async () => {
+      getByKey.mockReturnValue(vision(20, 1))
+      expect((await ask(base)).isError).toBeUndefined()
+      writeFileSync(path.join(workspace, 'big.png'), await png(2000, 2000))
+      const result = await askWithImage('big.png')
+      expect(result.isError).toBe(true)
+      expect(text(result)).toContain(`$${ASK_MODEL_PER_CALL_CAP_USD} per-call cap`)
+    })
   })
 })
