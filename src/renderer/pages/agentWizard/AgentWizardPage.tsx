@@ -31,7 +31,7 @@ import { AbsoluteFilePathSchema } from '@shared/types/file'
 import { buildAgentRoster, ROSTER_ROLES, type RosterEntry, type RosterRole } from './agentRoster'
 import { AgentWizardDialog } from './AgentWizardDialog'
 import { PERMISSION_MODE_KEYS, ROLE_BADGE_KEYS, ROLE_GROUP_KEYS } from './labelKeys'
-import { formatModelPrice } from './modelLabel'
+import { ModelPrice } from './ModelPrice'
 
 interface TemplateListing {
   templates: AgentTemplate[]
@@ -338,7 +338,7 @@ function ModelSlot({
     <div className="flex items-baseline gap-2 text-xs leading-relaxed">
       <span className="w-10 flex-none text-muted-foreground">{label}</span>
       <span className="text-sm">{resolved?.name ?? model}</span>
-      <span className="text-muted-foreground">{formatModelPrice(resolved)}</span>
+      <ModelPrice model={resolved} />
     </div>
   )
 }

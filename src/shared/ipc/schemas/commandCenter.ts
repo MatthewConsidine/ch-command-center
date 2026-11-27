@@ -1,13 +1,15 @@
 import * as z from 'zod'
 
 import { AgentPermissionModeSchema } from '@shared/data/api/schemas/agents'
+import { RuntimeModelPricingSchema, UniqueModelIdSchema } from '@shared/data/types/model'
 import { AbsoluteFilePathSchema } from '@shared/types/file'
 
 import { defineRoute } from '../define'
 
 /**
  * Command Center IPC schemas — the Agent Wizard's file work: reading role templates from the
- * user's templates folder, and listing or adding worker (sub-agent) files inside project workspaces.
+ * user's templates folder, and listing or adding worker (sub-agent) files inside project workspaces;
+ * plus the per-provider prices OpenRouter quotes for one model.
  */
 
 export const AGENT_TEMPLATE_ROLES = ['chief', 'lead', 'worker', 'scheduled'] as const
@@ -44,6 +46,17 @@ export const WorkerFileSchema = z.object({
 })
 export type WorkerFile = z.infer<typeof WorkerFileSchema>
 
+/** One upstream provider serving an OpenRouter model; `uptime` is the last 30 minutes, in percent. */
+export const OpenRouterEndpointSchema = z.object({
+  provider: z.string(),
+  tag: z.string().optional(),
+  quantization: z.string().optional(),
+  contextLength: z.number().optional(),
+  uptime: z.number().optional(),
+  pricing: RuntimeModelPricingSchema.optional()
+})
+export type OpenRouterEndpoint = z.infer<typeof OpenRouterEndpointSchema>
+
 export const commandCenterRequestSchemas = {
   'command_center.templates.list': defineRoute({
     input: z.strictObject({ dir: AbsoluteFilePathSchema }),
@@ -64,5 +77,10 @@ export const commandCenterRequestSchemas = {
       worker: WorkerFileSchema.extend({ prompt: z.string() })
     }),
     output: z.object({ created: z.boolean() })
+  }),
+  /** Empty for a model that isn't on Cherry's OpenRouter provider. */
+  'command_center.model_endpoints.list': defineRoute({
+    input: z.strictObject({ modelId: UniqueModelIdSchema }),
+    output: z.array(OpenRouterEndpointSchema)
   })
 }

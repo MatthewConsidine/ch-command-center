@@ -1,6 +1,6 @@
 import type { Model } from '@shared/data/types/model'
 
-const dollars = (value: number) => `$${Number(value.toPrecision(4))}`
+export const dollars = (value: number) => `$${Number(value.toPrecision(4))}`
 
 /** "$2 / $10": input and output price per million tokens; empty when the model has no price. */
 export function formatModelPrice(model: Pick<Model, 'pricing'> | undefined): string {
