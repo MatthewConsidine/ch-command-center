@@ -124,3 +124,15 @@ export function summarizeProject(
     )
   }
 }
+
+/** Distinct Agent ids that have a session in each workspace, keyed by workspace id. */
+export function mapWorkspaceAgents(sessions: readonly AgentSessionEntity[]): Map<string, string[]> {
+  const byWorkspace = new Map<string, Set<string>>()
+  for (const session of sessions) {
+    if (!session.agentId) continue
+    const agents = byWorkspace.get(session.workspaceId) ?? new Set<string>()
+    agents.add(session.agentId)
+    byWorkspace.set(session.workspaceId, agents)
+  }
+  return new Map([...byWorkspace].map(([workspaceId, agents]) => [workspaceId, [...agents]]))
+}

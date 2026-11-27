@@ -1,12 +1,16 @@
-import { useMemo } from 'react'
+import { FolderPlus, Trash2 } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@cherrystudio/ui'
+import { Button, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@cherrystudio/ui'
 import { usePreference } from '@data/hooks/usePreference'
 import { useDataChange, useQuery } from '@renderer/data/hooks/useDataApi'
+import { WorkspaceDeleteConfirmDialog } from '@renderer/components/resourceCatalog/dialogs/workspace'
 import { useAgents } from '@renderer/hooks/agent/useAgent'
+import { useAddWorkspaceFolder } from '@renderer/hooks/agent/useAddWorkspaceFolder'
+import { AGENT_WORKSPACE_TYPE, type AgentWorkspaceEntity } from '@shared/data/api/schemas/agentWorkspaces'
 
-import { listLeadWorkspaces } from './commandCenterProjects'
+import { listLeadWorkspaces, mapWorkspaceAgents } from './commandCenterProjects'
 
 const AUTO_LEAD = '__auto__'
 
@@ -26,6 +30,15 @@ export function CommandCenterSettings({ onChiefChange }: CommandCenterSettingsPr
     query: { agentId: chiefAgentId || 'unlinked' }
   })
   const { data: tasks } = useQuery('/agent-tasks', { query: { limit: 500 } })
+  const { data: sessions } = useQuery('/agent-sessions', { query: { limit: 200 } })
+  const { addFolder, adding } = useAddWorkspaceFolder()
+  const [removing, setRemoving] = useState<AgentWorkspaceEntity | null>(null)
+  const allUserWorkspaces = useMemo(
+    () => (workspaces ?? []).filter((workspace) => workspace.type === AGENT_WORKSPACE_TYPE.USER),
+    [workspaces]
+  )
+  const agentsByWorkspace = useMemo(() => mapWorkspaceAgents(sessions?.items ?? []), [sessions])
+  const agentNames = useMemo(() => new Map(agents.map((agent) => [agent.id, agent.name])), [agents])
   const userWorkspaces = useMemo(() => {
     const excluded = new Set<string>()
     if (chiefAgentId && chiefLatest?.session?.workspaceId) excluded.add(chiefLatest.session.workspaceId)
@@ -95,6 +108,46 @@ export function CommandCenterSettings({ onChiefChange }: CommandCenterSettingsPr
           ))
         )}
       </div>
+
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-4">
+          <span className="font-medium text-sm">{t('commandCenter.workspacesTitle')}</span>
+          <Button type="button" variant="outline" size="sm" disabled={adding} onClick={() => void addFolder()}>
+            <FolderPlus className="size-4" />
+            {t('commandCenter.addFolder')}
+          </Button>
+        </div>
+        {allUserWorkspaces.map((workspace) => {
+          const used = (agentsByWorkspace.get(workspace.id) ?? []).map((id) => agentNames.get(id) ?? id)
+          return (
+            <div key={workspace.id} className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="truncate text-sm">{workspace.name}</div>
+                <div className="truncate text-muted-foreground text-xs" title={workspace.path}>
+                  {workspace.path}
+                </div>
+                <div className="truncate text-muted-foreground text-xs">
+                  {used.length > 0
+                    ? t('commandCenter.workspaceUsedBy', { agents: used.join(', ') })
+                    : t('commandCenter.workspaceUnused')}
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label={t('commandCenter.removeWorkspace')}
+                onClick={() => setRemoving(workspace)}>
+                <Trash2 className="size-4" />
+              </Button>
+            </div>
+          )
+        })}
+      </div>
+
+      {removing && (
+        <WorkspaceDeleteConfirmDialog workspace={removing} onDeleted={() => undefined} onClose={() => setRemoving(null)} />
+      )}
     </div>
   )
 }

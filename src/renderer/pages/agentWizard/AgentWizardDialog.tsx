@@ -1,3 +1,4 @@
+import { FolderPlus } from 'lucide-react'
 import { type ReactNode, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -20,6 +21,7 @@ import {
 } from '@cherrystudio/ui'
 import { usePreference } from '@data/hooks/usePreference'
 import { useInvalidateCache } from '@renderer/data/hooks/useDataApi'
+import { useAddWorkspaceFolder } from '@renderer/hooks/agent/useAddWorkspaceFolder'
 import { ipcApi } from '@renderer/ipc'
 import { type AgentPermissionMode, AgentPermissionModeSchema } from '@shared/data/api/schemas/agents'
 import type { AgentWorkspaceEntity } from '@shared/data/api/schemas/agentWorkspaces'
@@ -50,6 +52,7 @@ type Outcome = { label: string; ok: boolean; note?: string }
 export function AgentWizardDialog({ template, workspaces, models, roster, workers, onClose }: AgentWizardDialogProps) {
   const { t } = useTranslation()
   const invalidate = useInvalidateCache()
+  const { addFolder, adding } = useAddWorkspaceFolder()
   const [leadAgents, setLeadAgents] = usePreference('feature.command_center.lead_agents')
   const [, setChiefAgentId] = usePreference('feature.command_center.chief_agent_id')
 
@@ -215,6 +218,21 @@ export function AgentWizardDialog({ template, workspaces, models, roster, worker
                   </SelectContent>
                 </Select>
               )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="self-start"
+                disabled={adding}
+                onClick={() =>
+                  void addFolder().then((workspace) => {
+                    if (!workspace) return
+                    setSelected((ids) => (perProject ? [...new Set([...ids, workspace.id])] : [workspace.id]))
+                  })
+                }>
+                <FolderPlus className="size-4" />
+                {t('commandCenter.addFolder')}
+              </Button>
             </fieldset>
 
             {isAgent && (

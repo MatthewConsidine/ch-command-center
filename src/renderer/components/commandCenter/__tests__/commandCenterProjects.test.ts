@@ -5,7 +5,7 @@ import type { AgentWorkspaceEntity } from '@shared/data/api/schemas/agentWorkspa
 
 import type { ScheduledTaskEntity } from '@shared/data/types/agent'
 
-import { findLatestSession, listCommandCenterProjects, listLeadWorkspaces, summarizeProject } from '../commandCenterProjects'
+import { findLatestSession, listCommandCenterProjects, listLeadWorkspaces, mapWorkspaceAgents, summarizeProject } from '../commandCenterProjects'
 
 function session(id: string, agentId: string, workspaceId: string, lastActivityAt: string): AgentSessionEntity {
   return { id, agentId, workspaceId, lastActivityAt } as AgentSessionEntity
@@ -126,5 +126,20 @@ describe('summarizeProject', () => {
   it('reports a failed stream as failed rather than done', () => {
     const summary = summarizeProject('ws-a', sessions, new Map([['new-done', { status: 'error', isAwaitingApproval: false }]]), [])
     expect(summary.sessions[0].state).toBe('failed')
+  })
+})
+
+describe('mapWorkspaceAgents', () => {
+  it('lists each agent once per workspace and skips sessions whose agent was deleted', () => {
+    const map = mapWorkspaceAgents([
+      session('1', 'lead', 'ws-a', '2026-01-01T00:00:00.000Z'),
+      session('2', 'lead', 'ws-a', '2026-02-01T00:00:00.000Z'),
+      session('3', 'helper', 'ws-a', '2026-02-01T00:00:00.000Z'),
+      session('4', 'lead', 'ws-b', '2026-02-01T00:00:00.000Z'),
+      { ...session('5', 'x', 'ws-c', '2026-02-01T00:00:00.000Z'), agentId: null }
+    ])
+    expect(map.get('ws-a')).toEqual(['lead', 'helper'])
+    expect(map.get('ws-b')).toEqual(['lead'])
+    expect(map.has('ws-c')).toBe(false)
   })
 })
