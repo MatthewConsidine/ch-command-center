@@ -14,6 +14,7 @@ import { cherryCloudHandlers } from './cherryCloud'
 import { cherryinHandlers } from './cherryin'
 import { citationHandlers } from './citation'
 import { codeCliHandlers } from './codeCli'
+import { commandCenterHandlers } from './commandCenter'
 import { computerUseHandlers } from './computerUse'
 import { deepSeekHarnessHandlers } from './deepSeekHarness'
 import { diagnosticsHandlers } from './diagnostics'
@@ -74,6 +75,7 @@ export const ipcHandlers: IpcHandlersFor<IpcRequestSchemas> = {
   ...browserHandlers,
   ...channelHandlers,
   ...cherryinHandlers,
+  ...commandCenterHandlers,
   ...cherryCloudHandlers,
   ...citationHandlers,
   ...codeCliHandlers,
