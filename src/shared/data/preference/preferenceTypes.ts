@@ -153,6 +153,7 @@ export type CommandCenterLeadAgents = Record<string, string>
 
 export const SIDEBAR_FAVORITES = [
   'command_center',
+  'agent_wizard',
   'assistants',
   'agents',
   'scheduled_tasks',

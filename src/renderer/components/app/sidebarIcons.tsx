@@ -17,7 +17,8 @@ import {
   Package,
   Palette,
   Radar,
-  Store
+  Store,
+  WandSparkles
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 
@@ -35,6 +36,7 @@ const CodeMateIcon: SidebarIconComponent = (props) => <Code {...props} viewBox="
  */
 export const SIDEBAR_ICON_COMPONENTS = {
   command_center: Radar,
+  agent_wizard: WandSparkles,
   assistants: MessageSquare,
   agents: MousePointerClick,
   scheduled_tasks: Clock,
@@ -103,6 +105,8 @@ export function SidebarIcon({
       />
     )
   }
+  // A filled wand reads as a blob; a heavier stroke marks it as selected instead.
+  if (icon === 'agent_wizard') return <Outline {...props} strokeWidth={2.6} />
   if (icon === 'command_center') {
     return (
       <Icon

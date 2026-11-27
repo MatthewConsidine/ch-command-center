@@ -58,6 +58,7 @@ describe('DefaultPreferences', () => {
 
     const sidebarShortcutsDefault: PreferenceSchemas['default']['ui.sidebar_shortcut'] = [
       'command_center',
+      'agent_wizard',
       'agents',
       'assistants',
       'scheduled_tasks',

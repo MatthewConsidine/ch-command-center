@@ -371,6 +371,11 @@
           "type": "shortcut"
         },
         {
+          "id": "sidebar-shortcut:core.app:agent_wizard",
+          "target": { "kind": "resource", "locator": { "providerId": "core.app", "resourceId": "agent_wizard" } },
+          "type": "shortcut"
+        },
+        {
           "id": "sidebar-shortcut:core.app:agents",
           "target": { "kind": "resource", "locator": { "providerId": "core.app", "resourceId": "agents" } },
           "type": "shortcut"
@@ -1623,6 +1628,13 @@
       "defaultValue": {},
       "status": "classified",
       "description": "Command Center: lead Agent id per workspace id, chosen by the user (fork feature, no v1 source)"
+    },
+    {
+      "targetKey": "feature.command_center.templates_dir",
+      "type": "string",
+      "defaultValue": "",
+      "status": "classified",
+      "description": "Agent Wizard: absolute path of the folder holding the user's agent role templates; empty until chosen (fork feature, no v1 source)"
     }
   ]
 }

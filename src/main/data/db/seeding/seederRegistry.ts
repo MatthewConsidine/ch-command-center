@@ -1,6 +1,7 @@
 import type { ISeeder } from '../types'
 import { AgentSessionContextSeeder } from './seeders/AgentSessionContextSeeder'
 import { AgentSessionMessageTreeSeeder } from './seeders/AgentSessionMessageTreeSeeder'
+import { AgentWizardShortcutSeeder } from './seeders/agentWizardShortcutSeeder'
 import { BrowserCapabilityUpgradeSeeder } from './seeders/browserCapabilityUpgradeSeeder'
 import { BuiltinMcpServerSeeder } from './seeders/builtinMcpServerSeeder'
 import { CherryAiDefaultModelSeeder } from './seeders/cherryaiDefaultModelSeeder'
@@ -54,6 +55,7 @@ export const seeders: ISeeder[] = [
   new SidebarShortcutMigrationSeeder(),
   new ScheduledTasksShortcutSeeder(),
   new CommandCenterShortcutSeeder(),
+  new AgentWizardShortcutSeeder(),
   new SelectionActionItemsUpgradeSeeder(),
   new MessageNavigationUpgradeSeeder(),
   new ConversationListSortSeeder(),

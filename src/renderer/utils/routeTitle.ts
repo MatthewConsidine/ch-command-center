@@ -10,6 +10,7 @@ const routeTitleKeys: Record<string, string> = {
   '/app/chat': 'agent.session.group.conversation',
   '/app/agents': 'title.work',
   '/app/command-center': 'commandCenter.title',
+  '/app/agent-wizard': 'agentWizard.title',
   '/app/scheduled-tasks': 'settings.scheduledTasks.title',
   '/app/paintings': 'title.paintings',
   '/app/marketplace': 'title.marketplace',

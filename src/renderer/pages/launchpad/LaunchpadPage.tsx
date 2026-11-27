@@ -42,6 +42,7 @@ const SORTABLE_CONTENTS_STYLE = { display: 'contents' } as const
 
 const APP_ICON_SOURCES: Record<SidebarAppId, string | undefined> = {
   command_center: undefined,
+  agent_wizard: undefined,
   assistants: assistantsIcon,
   agents: agentsIcon,
   scheduled_tasks: scheduledTasksIcon,

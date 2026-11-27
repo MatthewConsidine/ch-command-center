@@ -53,6 +53,10 @@ const SIDEBAR_APP_DEFINITIONS = [
     routePrefix: '/app/command-center'
   },
   {
+    id: 'agent_wizard',
+    routePrefix: '/app/agent-wizard'
+  },
+  {
     id: 'agents',
     routePrefix: '/app/agents',
     conversationRoute: {
