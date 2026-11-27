@@ -11,6 +11,7 @@
  * approval is a security policy and belongs in the runtime-neutral approval layer.
  */
 
+import { ASK_MODEL_TOOL_NAME } from '@main/ai/mcp/servers/cherryAskModelTools'
 import { CLI_INSTALL_TOOL_NAME, CLI_LIST_TOOL_NAME, CLI_SEARCH_TOOL_NAME } from '@main/ai/mcp/servers/cherryCliTools'
 import { computerUseToolDefinitions } from '@main/ai/tools/computerUse'
 import { MOVE_TO_TRASH_TOOL_NAME } from '@main/ai/tools/moveToTrash'
@@ -113,6 +114,8 @@ const BUILTIN_TOOL_POLICIES = {
   cherryCliList: tool(CHERRY_MCP_SERVER.CHERRY_TOOLS, CLI_LIST_TOOL_NAME, 'auto'),
   cherryCliSearch: tool(CHERRY_MCP_SERVER.CHERRY_TOOLS, CLI_SEARCH_TOOL_NAME, 'auto'),
   cherryCliInstall: tool(CHERRY_MCP_SERVER.CHERRY_TOOLS, CLI_INSTALL_TOOL_NAME, 'required'),
+  // Spend is bounded in-tool by per-call and per-session caps, so no per-call prompt.
+  cherryAskModel: tool(CHERRY_MCP_SERVER.CHERRY_TOOLS, ASK_MODEL_TOOL_NAME, 'auto'),
   cherryToMarkdown: tool(CHERRY_MCP_SERVER.CHERRY_TOOLS, TO_MARKDOWN_TOOL_NAME, 'auto'),
   cherryGenerateImage: tool(CHERRY_MCP_SERVER.CHERRY_TOOLS, GENERATE_IMAGE_TOOL_NAME, 'required'),
 
