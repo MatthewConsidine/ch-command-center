@@ -1,3 +1,7 @@
+import { mkdtempSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
+
 import type { Client } from '@modelcontextprotocol/client'
 import { McpServer } from '@modelcontextprotocol/server'
 import { connectMcpTestClient } from '@test-helpers/mcp/client'
@@ -17,11 +21,12 @@ const { registerAskModelTools, ASK_MODEL_TOOL_NAME, ASK_MODEL_PER_CALL_CAP_USD, 
 type Result = { isError?: boolean; content: Array<{ type: string; text?: string }> }
 const clients: Client[] = []
 let sessionCounter = 0
+const workspace = mkdtempSync(path.join(tmpdir(), 'ask-model-'))
 
 async function ask(args: Record<string, unknown>, sessionId = `s${sessionCounter++}`): Promise<Result> {
   const client = await connectMcpTestClient(() => {
     const server = new McpServer({ name: 'cherry-tools', version: '1.0.0' })
-    registerAskModelTools(server, { sessionId })
+    registerAskModelTools(server, { sessionId, workspacePath: workspace })
     return server
   })
   clients.push(client)
@@ -93,5 +98,34 @@ describe('cherry-tools ask_model', () => {
     expect((await ask(base, 'fail')).isError).toBe(true)
     const ok = JSON.parse(text(await ask(base, 'fail')))
     expect(ok.sessionSpentUsd).toBeCloseTo(ok.costUsd)
+  })
+
+  it('reads a long prompt from a workspace file and passes system turns as the system prompt', async () => {
+    writeFileSync(
+      path.join(workspace, 'p.json'),
+      JSON.stringify({
+        messages: [
+          { role: 'system', content: 'be brief' },
+          { role: 'user', content: 'hi' }
+        ]
+      })
+    )
+    const result = await ask({ model: base.model, messagesFile: 'p.json', temperature: 0.8 })
+    expect(result.isError).toBeUndefined()
+    expect(generateText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        system: 'be brief',
+        messages: [{ role: 'user', content: 'hi' }],
+        callOverrides: expect.objectContaining({ temperature: 0.8 })
+      })
+    )
+  })
+
+  it('refuses a messagesFile outside the workspace', async () => {
+    const outside = path.join(mkdtempSync(path.join(tmpdir(), 'outside-')), 'p.json')
+    writeFileSync(outside, JSON.stringify([{ role: 'user', content: 'hi' }]))
+    const result = await ask({ model: base.model, messagesFile: outside })
+    expect(result.isError).toBe(true)
+    expect(generateText).not.toHaveBeenCalled()
   })
 })
