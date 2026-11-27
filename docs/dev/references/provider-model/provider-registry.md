@@ -4,6 +4,7 @@ sources:
   - packages/provider-registry
   - src/main/data/services/ProviderRegistryService.ts
   - src/main/services/CherryInModelSyncService.ts
+  - src/main/services/OpenRouterPricingSyncService.ts
   - src/main/data/services/ModelService.ts
   - src/main/data/db/seeding
 ---
@@ -100,6 +101,8 @@ SDK only provides model IDs. All other data (capabilities, pricing, etc.)
 comes from the registry — SDK data does not overwrite curated registry data.
 ```
 
+The one exception is OpenRouter pricing: its model list quotes each model's live price, and the renderer's model sync keeps that price instead of the registry's. Saving a fetched model stores the live price as an ordinary `pricing` delta.
+
 ### 4. CherryIN Endpoint Refresh
 
 `CherryInModelSyncService` checks the enabled built-in CherryIN provider 30 seconds after startup and every six hours afterward. It skips providers without an enabled API key or without local models. The last request attempt is stored in Main's persist cache, so restarts and failed or empty requests do not bypass the six-hour limit.
@@ -107,6 +110,10 @@ comes from the registry — SDK data does not overwrite curated registry data.
 The service reads the provider's model list and updates only the endpoint types of existing models with matching raw API model IDs and non-empty recognized endpoints. Server endpoint types are authoritative, including their order: a later refresh replaces manually changed endpoint types too. Other model settings and model membership remain unchanged. Failed requests, empty lists, missing models, and absent or unrecognized endpoint types preserve local data.
 
 Requests time out after 30 seconds and are cancelled on shutdown. A changed provider configuration discards an in-flight response. Updates commit atomically through `ModelService`, then notify mounted model queries to refetch. The service does not replay active generation requests.
+
+### 5. OpenRouter Price Refresh
+
+`OpenRouterPricingSyncService` follows the same schedule, throttle, timeout and cancellation rules for the enabled built-in OpenRouter provider. It reads OpenRouter's model list and updates only the `pricing` of existing models whose live price differs from the stored one, including prices edited by hand; models without a fixed live price keep theirs. Membership and other settings remain unchanged.
 
 ## Merge Functions
 
