@@ -103,6 +103,21 @@ export function SidebarIcon({
       />
     )
   }
+  if (icon === 'command_center') {
+    return (
+      <Icon
+        {...props}
+        fill="currentColor"
+        iconNode={[
+          ['circle', { cx: '12', cy: '12', r: '10', key: 'dish' }],
+          ['path', { d: 'M16.24 7.76A6 6 0 1 0 8.23 16.67', fill: 'none', stroke: 'var(--background)', key: 'ring' }],
+          ['path', { d: 'M17.99 11.66A6 6 0 0 1 15.77 16.67', fill: 'none', stroke: 'var(--background)', key: 'arc' }],
+          ['circle', { cx: '12', cy: '12', r: '2', fill: 'var(--background)', stroke: 'none', key: 'hub' }],
+          ['path', { d: 'm13.41 10.59 4.24-4.24', fill: 'none', stroke: 'var(--background)', key: 'sweep' }]
+        ]}
+      />
+    )
+  }
   const filledPath = FILLED_PATHS[icon]
   if (filledPath) {
     return (
